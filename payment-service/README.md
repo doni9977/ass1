@@ -164,17 +164,18 @@ docker rmi postgres:16
 
 ## Architecture Diagram
 
-`graph TD
-Client([Client / Postman])
-
-    subgraph Order Service
+```mermaid
+graph TD
+    Client([Client / Postman])
+    
+    subgraph "Order Service"
         OrderAPI[HTTP Handlers]
         OrderUC[Use Cases]
         OrderRepo[Postgres Repository]
         PaymentGW[HTTP Payment Gateway]
     end
     
-    subgraph Payment Service
+    subgraph "Payment Service"
         PaymentAPI[HTTP Handlers]
         PaymentUC[Use Cases]
         PaymentRepo[Postgres Repository]
