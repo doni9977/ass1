@@ -164,10 +164,9 @@ docker rmi postgres:16
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-    Client([Client / Postman])
-    
+`graph TD
+Client([Client / Postman])
+
     subgraph Order Service
         OrderAPI[HTTP Handlers]
         OrderUC[Use Cases]
@@ -184,15 +183,15 @@ graph TD
     OrderDB[(Order DB : 5434)]
     PaymentDB[(Payment DB : 5435)]
     
-    Client -->|POST, GET, PATCH /orders| OrderAPI
-    Client -->|GET /payments/:id| PaymentAPI
+    Client -->|"POST, GET, PATCH /orders"| OrderAPI
+    Client -->|"GET /payments/:id"| PaymentAPI
     
     OrderAPI --> OrderUC
     OrderUC --> OrderRepo
     OrderRepo --> OrderDB
     OrderUC --> PaymentGW
     
-    PaymentGW -->|POST /payments (REST)| PaymentAPI
+    PaymentGW -->|"POST /payments (REST)"| PaymentAPI
     
     PaymentAPI --> PaymentUC
     PaymentUC --> PaymentRepo
