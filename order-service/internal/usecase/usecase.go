@@ -3,6 +3,7 @@ package usecase
 import (
 	"errors"
 	"order-service/internal/domain"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -73,4 +74,34 @@ func (u *OrderUseCase) CancelOrder(id string) error {
 		return errors.New("cannot cancel paid order")
 	}
 	return u.repo.UpdateStatus(id, "Cancelled")
+}
+
+func (u *OrderUseCase) GetOrdersByAmountRange(minAmountStr, maxAmountStr string) ([]*domain.Order, error) {
+	if minAmountStr == "" && maxAmountStr == "" {
+		return nil, errors.New("missing min_amount and max_amount")
+	}
+
+	if minAmountStr == "" || maxAmountStr == "" {
+		return nil, errors.New("both min_amount and max_amount are required")
+	}
+
+	minAmount, err := strconv.ParseInt(minAmountStr, 10, 64)
+	if err != nil {
+		return nil, errors.New("invalid min_amount")
+	}
+
+	maxAmount, err := strconv.ParseInt(maxAmountStr, 10, 64)
+	if err != nil {
+		return nil, errors.New("invalid max_amount")
+	}
+
+	if minAmount < 0 {
+		return nil, errors.New("min_amount less than 0")
+	}
+
+	if maxAmount > 1000000 {
+		return nil, errors.New("max_amount greater than 1000000")
+	}
+
+	return u.repo.GetOrdersByAmountRange(minAmount, maxAmount)
 }

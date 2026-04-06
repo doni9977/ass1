@@ -161,3 +161,39 @@ docker rmi postgres:16
 	- Make sure payment-postgres container is running.
 - relation "payments" does not exist
 	- Migration migrations/up.sql was not applied.
+
+## Architecture Diagram
+
+```mermaid
+graph TD
+    Client([Client / Postman])
+    
+    subgraph Order Service
+        OrderAPI[HTTP Handlers]
+        OrderUC[Use Cases]
+        OrderRepo[Postgres Repository]
+        PaymentGW[HTTP Payment Gateway]
+    end
+    
+    subgraph Payment Service
+        PaymentAPI[HTTP Handlers]
+        PaymentUC[Use Cases]
+        PaymentRepo[Postgres Repository]
+    end
+    
+    OrderDB[(Order DB : 5434)]
+    PaymentDB[(Payment DB : 5435)]
+    
+    Client -->|POST, GET, PATCH /orders| OrderAPI
+    Client -->|GET /payments/:id| PaymentAPI
+    
+    OrderAPI --> OrderUC
+    OrderUC --> OrderRepo
+    OrderRepo --> OrderDB
+    OrderUC --> PaymentGW
+    
+    PaymentGW -->|POST /payments (REST)| PaymentAPI
+    
+    PaymentAPI --> PaymentUC
+    PaymentUC --> PaymentRepo
+    PaymentRepo --> PaymentDB

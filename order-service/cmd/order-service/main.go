@@ -27,6 +27,7 @@ func main() {
 	router.POST("/orders", handler.CreateOrder)
 	router.GET("/orders/:id", handler.GetOrder)
 	router.PATCH("/orders/:id/cancel", handler.CancelOrder)
+	router.GET("/orders", handler.GetOrdersByAmountRange)
 
 	router.Run(":8080")
 }

@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"order-service/internal/domain"
 	"order-service/internal/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -60,4 +61,21 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusOK)
+}
+
+func (h *OrderHandler) GetOrdersByAmountRange(c *gin.Context) {
+	minAmountStr := c.Query("min_amount")
+	maxAmountStr := c.Query("max_amount")
+
+	orders, err := h.useCase.GetOrdersByAmountRange(minAmountStr, maxAmountStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if orders == nil {
+		orders = []*domain.Order{}
+	}
+
+	c.JSON(http.StatusOK, orders)
 }
