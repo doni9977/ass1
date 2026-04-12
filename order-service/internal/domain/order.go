@@ -17,6 +17,7 @@ type OrderRepository interface {
 	GetByID(id string) (*Order, error)
 	GetByIdempotencyKey(key string) (*Order, error)
 	UpdateStatus(id, status string) error
+	GetOrdersByAmountRange(minAmount, maxAmount int64) ([]*Order, error)
 }
 
 type PaymentGateway interface {
