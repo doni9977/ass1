@@ -1,3 +1,5 @@
+// order-service/cmd/order-service/main.go
+
 package main
 
 import (
@@ -6,64 +8,72 @@ import (
 	"net"
 	"os"
 
+	"order-service/internal/app"
 	"order-service/internal/repository"
-	grpctransport "order-service/internal/transport/grpc"
-	httptransport "order-service/internal/transport/http"
+	grpcTransport "order-service/internal/transport/grpc"
+	httpHandler "order-service/internal/transport/http"
 	"order-service/internal/usecase"
 
-	orderpb "github.com/doni9977/ass2go-gen/order/v1"
+	pbOrder "github.com/doni9977/ass2go-gen/order/v1"
+	pbPayment "github.com/doni9977/ass2go-gen/payment/v1"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	db, err := sql.Open("postgres", "postgres://user:pass@localhost:5434/orderdb?sslmode=disable")
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgres://user:pass@localhost:5434/orderdb?sslmode=disable"
+	}
+	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	paymentAddr := os.Getenv("PAYMENT_GRPC_ADDR")
-	if paymentAddr == "" {
-		paymentAddr = "localhost:50051"
+	paymentServiceURL := os.Getenv("PAYMENT_GRPC_URL")
+	if paymentServiceURL == "" {
+		paymentServiceURL = "localhost:50051"
 	}
-
-	rawClient, err := grpctransport.NewPaymentClient(paymentAddr)
+	conn, err := grpc.Dial(paymentServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("failed to connect to payment grpc: %v", err)
+		log.Fatal(err)
 	}
+	defer conn.Close()
 
-	paymentAdapter := grpctransport.NewGRPCPaymentAdapter(rawClient)
+	paymentClient := pbPayment.NewPaymentServiceClient(conn)
+	paymentGateway := app.NewGRPCPaymentGateway(paymentClient)
 
 	repo := repository.NewPostgresOrderRepository(db)
-	uc := usecase.NewOrderUseCase(repo, paymentAdapter)
+	uc := usecase.NewOrderUseCase(repo, paymentGateway)
+
+	restHandler := httpHandler.NewOrderHandler(uc)
+	router := gin.Default()
+	router.POST("/orders", restHandler.CreateOrder)
+	router.GET("/orders/:id", restHandler.GetOrder)
+	router.PATCH("/orders/:id/cancel", restHandler.CancelOrder)
+	router.GET("/orders", restHandler.GetOrdersByAmountRange)
+
+	go func() {
+		restPort := os.Getenv("REST_PORT")
+		if restPort == "" {
+			restPort = ":8080"
+		}
+		router.Run(restPort)
+	}()
 
 	grpcPort := os.Getenv("GRPC_PORT")
 	if grpcPort == "" {
 		grpcPort = "50052"
 	}
-
 	lis, err := net.Listen("tcp", ":"+grpcPort)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatal(err)
 	}
-
 	grpcServer := grpc.NewServer()
-	orderServer := grpctransport.NewOrderServer(uc)
-	orderpb.RegisterOrderServiceServer(grpcServer, orderServer)
-
-	go func() {
-		log.Printf("Order gRPC server (Streaming) listening at %v", lis.Addr())
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("failed to serve gRPC: %v", err)
-		}
-	}()
-
-	handler := httptransport.NewOrderHandler(uc)
-	router := gin.Default()
-	router.POST("/orders", handler.CreateOrder)
-	router.GET("/orders/:id", handler.GetOrder)
-
-	log.Println("Order HTTP server listening on :8080")
-	router.Run(":8080")
+	orderServer := grpcTransport.NewOrderServer(uc)
+	pbOrder.RegisterOrderServiceServer(grpcServer, orderServer)
+	grpcServer.Serve(lis)
 }

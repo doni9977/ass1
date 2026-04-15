@@ -1,40 +1,34 @@
 package app
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"errors"
-	"net/http"
 	"time"
+
+	pb "github.com/doni9977/ass2go-gen/payment/v1"
 )
 
-type HTTPPaymentGateway struct {
-	client  *http.Client
-	baseURL string
+type GRPCPaymentGateway struct {
+	client pb.PaymentServiceClient
 }
 
-func NewHTTPPaymentGateway(baseURL string) *HTTPPaymentGateway {
-	return &HTTPPaymentGateway{
-		client:  &http.Client{Timeout: 2 * time.Second},
-		baseURL: baseURL,
-	}
+func NewGRPCPaymentGateway(client pb.PaymentServiceClient) *GRPCPaymentGateway {
+	return &GRPCPaymentGateway{client: client}
 }
 
-func (g *HTTPPaymentGateway) AuthorizePayment(orderID string, amount int64) (string, error) {
-	payload := map[string]interface{}{
-		"order_id": orderID,
-		"amount":   amount,
-	}
-	body, _ := json.Marshal(payload)
+func (g *GRPCPaymentGateway) AuthorizePayment(orderID string, amount int64) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
-	resp, err := g.client.Post(g.baseURL+"/payments", "application/json", bytes.NewBuffer(body))
-	if err != nil || resp.StatusCode >= 500 {
+	req := &pb.PaymentRequest{
+		OrderId: orderID,
+		Amount:  amount,
+	}
+
+	res, err := g.client.ProcessPayment(ctx, req)
+	if err != nil {
 		return "", errors.New("service unavailable")
 	}
-	defer resp.Body.Close()
 
-	var res map[string]string
-	json.NewDecoder(resp.Body).Decode(&res)
-
-	return res["status"], nil
+	return res.Status, nil
 }

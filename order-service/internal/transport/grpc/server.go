@@ -1,8 +1,6 @@
 package grpc
 
 import (
-	"time"
-
 	"order-service/internal/usecase"
 
 	orderpb "github.com/doni9977/ass2go-gen/order/v1"
@@ -18,24 +16,24 @@ func NewOrderServer(uc *usecase.OrderUseCase) *OrderServer {
 }
 
 func (s *OrderServer) SubscribeToOrderUpdates(req *orderpb.OrderRequest, stream orderpb.OrderService_SubscribeToOrderUpdatesServer) error {
-	var lastStatus string
-	for {
-		order, err := s.useCase.GetOrder(req.OrderId)
-		if err != nil {
-			time.Sleep(1 * time.Second)
-			continue
-		}
+	ch := s.useCase.Subscribe(req.OrderId)
+	defer s.useCase.Unsubscribe(req.OrderId, ch)
 
-		if order.Status != lastStatus {
-			err = stream.Send(&orderpb.OrderStatusUpdate{
-				OrderId: order.ID,
-				Status:  order.Status,
+	for {
+		select {
+		case status, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			err := stream.Send(&orderpb.OrderStatusUpdate{
+				OrderId: req.OrderId,
+				Status:  status,
 			})
 			if err != nil {
 				return err
 			}
-			lastStatus = order.Status
+		case <-stream.Context().Done():
+			return nil
 		}
-		time.Sleep(1 * time.Second)
 	}
 }

@@ -6,18 +6,19 @@ import (
 	"net"
 	"os"
 
-	"payment-service/internal/repository"
-	grpctransport "payment-service/internal/transport/grpc"
-	httptransport "payment-service/internal/transport/http"
-	"payment-service/internal/usecase"
-
-	pb "github.com/doni9977/ass2go-gen/payment/v1"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
+
+	pb "github.com/doni9977/ass2go-gen/payment/v1"
+	"payment-service/internal/repository"
+	grpcHandler "payment-service/internal/transport/grpc"
+	httpHandler "payment-service/internal/transport/http"
+	"payment-service/internal/usecase"
 )
 
 func main() {
+
 	db, err := sql.Open("postgres", "postgres://user:pass@localhost:5435/paymentdb?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
@@ -26,34 +27,35 @@ func main() {
 	repo := repository.NewPostgresPaymentRepository(db)
 	uc := usecase.NewPaymentUseCase(repo)
 
+	gHandler := grpcHandler.NewPaymentGRPCHandler(uc)
+	hHandler := httpHandler.NewPaymentHandler(uc)
+
 	grpcPort := os.Getenv("GRPC_PORT")
 	if grpcPort == "" {
 		grpcPort = "50051"
 	}
-
 	lis, err := net.Listen("tcp", ":"+grpcPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(grpctransport.LoggingInterceptor),
-	)
-	grpcHandler := grpctransport.NewPaymentHandler(uc)
-	pb.RegisterPaymentServiceServer(grpcServer, grpcHandler)
+	// Interceptor для логирования
+	s := grpc.NewServer(grpc.UnaryInterceptor(grpcHandler.LoggingInterceptor))
+	pb.RegisterPaymentServiceServer(s, gHandler)
+
+	router := gin.Default()
+	router.POST("/payments", hHandler.ProcessPayment)
+	router.GET("/payments/:order_id", hHandler.GetPaymentStatus)
 
 	go func() {
 		log.Printf("gRPC server listening at %v", lis.Addr())
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve gRPC: %v", err)
 		}
 	}()
 
-	handler := httptransport.NewPaymentHandler(uc)
-
-	router := gin.Default()
-	router.POST("/payments", handler.ProcessPayment)
-	router.GET("/payments/:order_id", handler.GetPaymentStatus)
-
-	router.Run(":8081")
+	log.Println("Запуск REST сервера на порту :8081...")
+	if err := router.Run(":8081"); err != nil {
+		log.Fatalf("failed to run REST server: %v", err)
+	}
 }
