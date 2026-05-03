@@ -3,7 +3,7 @@ module order-service
 go 1.25.5
 
 require (
-	github.com/doni9977/ass2go-gen v0.0.0-20260412114709-8351a436420c
+	github.com/doni9977/ass2go-gen v0.0.0-20260415122249-8e1502d3ff05
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.1

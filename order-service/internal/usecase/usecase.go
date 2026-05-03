@@ -3,6 +3,7 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"order-service/internal/domain"
 	"order-service/internal/repository"
@@ -153,4 +154,8 @@ func (u *OrderUseCase) GetOrdersByAmountRange(minAmountStr, maxAmountStr string)
 	}
 
 	return u.repo.GetOrdersByAmountRange(minAmount, maxAmount)
+}
+
+func (u *OrderUseCase) ListPayments(ctx context.Context, status string) (interface{}, error) {
+	return u.paymentGateway.ListPayments(ctx, status)
 }

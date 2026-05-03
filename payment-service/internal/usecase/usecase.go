@@ -44,3 +44,7 @@ func (u *PaymentUseCase) ProcessPayment(orderID string, amount int64) (*domain.P
 func (u *PaymentUseCase) GetPaymentStatus(orderID string) (*domain.Payment, error) {
 	return u.repo.GetByOrderID(orderID)
 }
+
+func (u *PaymentUseCase) ListPayments(status string) ([]*domain.Payment, error) {
+	return u.repo.ListByStatus(status)
+}

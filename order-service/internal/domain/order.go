@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Order struct {
 	ID             string
@@ -22,4 +25,5 @@ type OrderRepository interface {
 
 type PaymentGateway interface {
 	AuthorizePayment(orderID string, amount int64) (string, error)
+	ListPayments(ctx context.Context, status string) (interface{}, error)
 }

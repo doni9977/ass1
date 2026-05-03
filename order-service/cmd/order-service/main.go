@@ -55,6 +55,7 @@ func main() {
 	router.GET("/orders/:id", restHandler.GetOrder)
 	router.PATCH("/orders/:id/cancel", restHandler.CancelOrder)
 	router.GET("/orders", restHandler.GetOrdersByAmountRange)
+	router.GET("/payments", restHandler.ListPayments)
 
 	go func() {
 		restPort := os.Getenv("REST_PORT")

@@ -79,3 +79,15 @@ func (h *OrderHandler) GetOrdersByAmountRange(c *gin.Context) {
 
 	c.JSON(http.StatusOK, orders)
 }
+
+func (h *OrderHandler) ListPayments(c *gin.Context) {
+	reqStatus := c.Query("status")
+
+	res, err := h.useCase.ListPayments(c.Request.Context(), reqStatus)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get payments: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}

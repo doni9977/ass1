@@ -11,8 +11,8 @@ github.com/cloudwego/base64x v0.1.6/go.mod h1:OFcloc187FXDaYHvrNIjxSe8ncn0OOM8gE
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/doni9977/ass2go-gen v0.0.0-20260412114709-8351a436420c h1:lJPSarZatenznIbl1/fWrcs0nYj7qCttt/tA8JJzqrA=
-github.com/doni9977/ass2go-gen v0.0.0-20260412114709-8351a436420c/go.mod h1:wjYVnj77bh2gAb9fxyoOPQz9dazuYQxUCUNHFlAHx9c=
+github.com/doni9977/ass2go-gen v0.0.0-20260415122249-8e1502d3ff05 h1:Mi8KTQs+UjVl8ASJW+aO6OGnUzFXW1FdjtYp++MDdgE=
+github.com/doni9977/ass2go-gen v0.0.0-20260415122249-8e1502d3ff05/go.mod h1:wjYVnj77bh2gAb9fxyoOPQz9dazuYQxUCUNHFlAHx9c=
 github.com/gabriel-vasile/mimetype v1.4.13 h1:46nXokslUBsAJE/wMsp5gtO500a4F3Nkz9Ufpk2AcUM=
 github.com/gabriel-vasile/mimetype v1.4.13/go.mod h1:d+9Oxyo1wTzWdyVUPMmXFvp4F9tea18J8ufA774AB3s=
 github.com/gin-contrib/sse v1.1.1 h1:uGYpNwTacv5R68bSGMapo62iLTRa9l5zxGCps4hK6ko=

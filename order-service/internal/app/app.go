@@ -32,3 +32,16 @@ func (g *GRPCPaymentGateway) AuthorizePayment(orderID string, amount int64) (str
 
 	return res.Status, nil
 }
+
+func (g *GRPCPaymentGateway) ListPayments(ctx context.Context, status string) (interface{}, error) {
+	req := &pb.ListPaymentsRequest{
+		Status: status,
+	}
+
+	res, err := g.client.ListPayments(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Payments, nil
+}

@@ -12,4 +12,5 @@ type Payment struct {
 type PaymentRepository interface {
 	Create(payment *Payment) error
 	GetByOrderID(orderID string) (*Payment, error)
+	ListByStatus(status string) ([]*Payment, error)
 }
