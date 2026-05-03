@@ -37,7 +37,6 @@ func (r *PostgresOrderRepository) UpdateStatus(id, status string) error {
 	_, err := r.db.Exec("UPDATE orders SET status = $1 WHERE id = $2", status, id)
 	return err
 }
-
 func (r *PostgresOrderRepository) GetOrdersByAmountRange(minAmount, maxAmount int64) ([]*domain.Order, error) {
 	rows, err := r.db.Query("SELECT id, customer_id, item_name, amount, status, created_at, idempotency_key FROM orders WHERE amount >= $1 AND amount <= $2", minAmount, maxAmount)
 	if err != nil {
@@ -64,8 +63,6 @@ func (r *PostgresOrderRepository) GetOrdersByAmountRange(minAmount, maxAmount in
 
 		if idempotencyKey.Valid {
 			order.IdempotencyKey = idempotencyKey.String
-		} else {
-			order.IdempotencyKey = ""
 		}
 
 		orders = append(orders, order)

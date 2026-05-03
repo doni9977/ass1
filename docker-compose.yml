@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  order-db:
+    image: postgres:16
+    container_name: order-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: order_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./order-service/migrations:/docker-entrypoint-initdb.d
+
+  payment-db:
+    image: postgres:16
+    container_name: payment-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: payment_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./payment-service/migrations:/docker-entrypoint-initdb.d
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - order-db
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "50051:50051"
+    depends_on:
+      - payment-db
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
