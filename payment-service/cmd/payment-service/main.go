@@ -10,16 +10,17 @@ import (
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 
-	pb "github.com/doni9977/ass2go-gen/payment/v1"
 	"payment-service/internal/repository"
 	grpcHandler "payment-service/internal/transport/grpc"
 	httpHandler "payment-service/internal/transport/http"
 	"payment-service/internal/usecase"
+
+	pb "github.com/doni9977/ass2go-gen/payment/v1"
 )
 
 func main() {
 
-	db, err := sql.Open("postgres", "postgres://user:pass@localhost:5435/paymentdb?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://postgres:postgres@payment-db:5432/payment_db?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +40,6 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	// Interceptor для логирования
 	s := grpc.NewServer(grpc.UnaryInterceptor(grpcHandler.LoggingInterceptor))
 	pb.RegisterPaymentServiceServer(s, gHandler)
 

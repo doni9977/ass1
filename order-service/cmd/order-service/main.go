@@ -1,5 +1,3 @@
-// order-service/cmd/order-service/main.go
-
 package main
 
 import (
@@ -26,7 +24,7 @@ import (
 func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://user:pass@localhost:5434/orderdb?sslmode=disable"
+		dbURL = "postgres://postgres:postgres@order-db:5432/order_db?sslmode=disable"
 	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -35,7 +33,7 @@ func main() {
 
 	paymentServiceURL := os.Getenv("PAYMENT_GRPC_URL")
 	if paymentServiceURL == "" {
-		paymentServiceURL = "localhost:50051"
+		paymentServiceURL = "payment-service:50051"
 	}
 	conn, err := grpc.Dial(paymentServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

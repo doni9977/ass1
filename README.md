@@ -118,3 +118,14 @@ cd test-stream && go run main.go
 
 - This README was created as a new root-level file and does not modify existing README files inside services.
 - Suitable for university submission with setup, architecture, and test instructions.
+
+
+# Assignment 3 - Event-Driven Architecture
+
+## Architecture Diagram
+```mermaid
+graph TD
+    Client -->|REST/gRPC| OrderService
+    OrderService -->|gRPC| PaymentService
+    PaymentService -->|Publish payment.completed| RabbitMQ
+    RabbitMQ -->|Consume| NotificationService
