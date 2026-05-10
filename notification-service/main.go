@@ -26,7 +26,6 @@ func main() {
 	var conn *amqp.Connection
 	var err error
 
-	// Пытаемся подключиться к RabbitMQ 15 раз с интервалом в 2 секунды
 	for i := 0; i < 15; i++ {
 		conn, err = amqp.Dial(os.Getenv("RABBITMQ_URL"))
 		if err == nil {
@@ -75,7 +74,6 @@ func main() {
 
 	go func() {
 		for d := range msgs {
-			// Проверка на идемпотентность (Idempotency)
 			if _, loaded := processedMessages.LoadOrStore(d.MessageId, true); loaded {
 				d.Ack(false)
 				continue
@@ -89,7 +87,6 @@ func main() {
 
 			fmt.Printf("[Notification] Sent email to %s for Order %s. Amount: $%.2f\n", event.CustomerEmail, event.OrderID, event.Amount)
 
-			// Ручное подтверждение (Manual ACK)
 			d.Ack(false)
 		}
 	}()

@@ -21,7 +21,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: payment_db
     ports:
-      - "5435:5432"
+      - "5436:5432"
     volumes:
       - ./payment-service/migrations:/docker-entrypoint-initdb.d
 
