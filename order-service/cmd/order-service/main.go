@@ -17,6 +17,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -41,14 +42,26 @@ func main() {
 	}
 	defer conn.Close()
 
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = "redis-cache:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisURL,
+	})
+
 	paymentClient := pbPayment.NewPaymentServiceClient(conn)
 	paymentGateway := app.NewGRPCPaymentGateway(paymentClient)
 
 	repo := repository.NewPostgresOrderRepository(db)
-	uc := usecase.NewOrderUseCase(repo, paymentGateway)
+
+	uc := usecase.NewOrderUseCase(repo, paymentGateway, rdb)
 
 	restHandler := httpHandler.NewOrderHandler(uc)
 	router := gin.Default()
+
+	router.Use(httpHandler.RateLimiterMiddleware(rdb))
+
 	router.POST("/orders", restHandler.CreateOrder)
 	router.GET("/orders/:id", restHandler.GetOrder)
 	router.PATCH("/orders/:id/cancel", restHandler.CancelOrder)
