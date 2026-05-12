@@ -4,6 +4,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"order-service/internal/domain"
 	"order-service/internal/repository"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type OrderUseCase struct {
@@ -19,13 +21,15 @@ type OrderUseCase struct {
 	paymentGateway domain.PaymentGateway
 	subscribers    map[string][]chan string
 	mu             sync.RWMutex
+	redisClient    *redis.Client
 }
 
-func NewOrderUseCase(repo *repository.PostgresOrderRepository, pg domain.PaymentGateway) *OrderUseCase {
+func NewOrderUseCase(repo *repository.PostgresOrderRepository, pg domain.PaymentGateway, rdb *redis.Client) *OrderUseCase {
 	return &OrderUseCase{
 		repo:           repo,
 		paymentGateway: pg,
 		subscribers:    make(map[string][]chan string),
+		redisClient:    rdb,
 	}
 }
 
@@ -64,6 +68,9 @@ func (u *OrderUseCase) Unsubscribe(orderID string, ch chan string) {
 func (u *OrderUseCase) updateOrderStatusAndNotify(orderID, status string) {
 	u.repo.UpdateStatus(orderID, status)
 	u.notifySubscribers(orderID, status)
+
+	ctx := context.Background()
+	u.redisClient.Del(ctx, "order:"+orderID)
 }
 
 func (u *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, idempotencyKey string) (*domain.Order, error) {
@@ -111,7 +118,26 @@ func (u *OrderUseCase) CreateOrder(customerID, itemName string, amount int64, id
 }
 
 func (u *OrderUseCase) GetOrder(id string) (*domain.Order, error) {
-	return u.repo.GetByID(id)
+	ctx := context.Background()
+	cacheKey := "order:" + id
+
+	val, err := u.redisClient.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var order domain.Order
+		if err := json.Unmarshal([]byte(val), &order); err == nil {
+			return &order, nil
+		}
+	}
+
+	order, err := u.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	orderBytes, _ := json.Marshal(order)
+	u.redisClient.Set(ctx, cacheKey, orderBytes, 5*time.Minute)
+
+	return order, nil
 }
 
 func (u *OrderUseCase) CancelOrder(id string) error {

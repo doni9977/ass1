@@ -1,11 +1,15 @@
 package http
 
 import (
+	"context"
 	"net/http"
+	"time"
+
 	"order-service/internal/domain"
 	"order-service/internal/usecase"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type OrderHandler struct {
@@ -14,6 +18,33 @@ type OrderHandler struct {
 
 func NewOrderHandler(uc *usecase.OrderUseCase) *OrderHandler {
 	return &OrderHandler{useCase: uc}
+}
+
+func RateLimiterMiddleware(rdb *redis.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		clientIP := c.ClientIP()
+		key := "rate_limit:" + clientIP
+
+		count, err := rdb.Incr(ctx, key).Result()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to connect to redis"})
+			c.Abort()
+			return
+		}
+
+		if count == 1 {
+			rdb.Expire(ctx, key, time.Minute)
+		}
+
+		if count > 10 {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too Many Requests"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }
 
 type createOrderReq struct {
