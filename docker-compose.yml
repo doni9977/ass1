@@ -40,6 +40,7 @@ services:
     build: ./payment-service
     container_name: payment-service
     ports:
+      - "8081:8081"
       - "50051:50051"
     depends_on:
       - payment-db

@@ -129,3 +129,26 @@ graph TD
     OrderService -->|gRPC| PaymentService
     PaymentService -->|Publish payment.completed| RabbitMQ
     RabbitMQ -->|Consume| NotificationService
+
+
+graph TD
+    %% Определяем стили для красоты (опционально)
+    classDef database fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef cache fill:#ffb3ba,stroke:#333,stroke-width:2px;
+    classDef broker fill:#ffdfba,stroke:#333,stroke-width:2px;
+    classDef external fill:#baffc9,stroke:#333,stroke-width:2px;
+
+    Client([Client / Postman]) -->|REST Request| OrderService[Order Service]
+    
+    %% Блок Order Service
+    OrderService <-->|Cache-Aside / Rate Limit| Redis[(Redis)]:::cache
+    OrderService <-->|Read / Write| OrderDB[(Order DB)]:::database
+    OrderService -->|gRPC| PaymentService[Payment Service]
+    
+    %% Блок Payment & Message Broker
+    PaymentService -->|Publish 'payment.completed'| RabbitMQ((RabbitMQ)):::broker
+    
+    %% Блок Notification Service
+    RabbitMQ -->|Consume (Async Worker)| NotificationService[Notification Service]
+    NotificationService <-->|Check Idempotency| Redis
+    NotificationService -->|Adapter (Real/Mock)| EmailProvider[External Email Provider]:::external

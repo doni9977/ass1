@@ -38,7 +38,7 @@ type MockEmailSender struct{}
 func (m *MockEmailSender) Send(email, orderID string, amount float64) error {
 	time.Sleep(500 * time.Millisecond)
 
-	if rand.Float32() < 0.3 {
+	if rand.Float32() < 0.8 {
 		return fmt.Errorf("mock network error timeout")
 	}
 
@@ -100,44 +100,46 @@ func main() {
 
 	go func() {
 		for d := range msgs {
-			var event PaymentEvent
-			if err := json.Unmarshal(d.Body, &event); err != nil {
-				d.Nack(false, false)
-				continue
-			}
-
-			idempotencyKey := "processed_notification:" + d.MessageId
-			isNew, err := rdb.SetNX(ctx, idempotencyKey, true, 24*time.Hour).Result()
-
-			if err != nil || !isNew {
-				fmt.Printf("[Notification] Message %s already processed. Skipping.\n", d.MessageId)
-				d.Ack(false)
-				continue
-			}
-
-			success := false
-			backoff := 2 * time.Second
-			maxRetries := 3
-
-			for i := 1; i <= maxRetries; i++ {
-				err := sender.Send(event.CustomerEmail, event.OrderID, event.Amount)
-				if err == nil {
-					success = true
-					break
+			go func(d amqp.Delivery) {
+				var event PaymentEvent
+				if err := json.Unmarshal(d.Body, &event); err != nil {
+					d.Nack(false, false)
+					return
 				}
 
-				fmt.Printf("[Notification] Attempt %d failed: %v. Retrying in %v...\n", i, err, backoff)
-				time.Sleep(backoff)
-				backoff *= 2
-			}
+				idempotencyKey := "processed_notification:" + d.MessageId
+				isNew, err := rdb.SetNX(ctx, idempotencyKey, true, 24*time.Hour).Result()
 
-			if success {
-				d.Ack(false)
-			} else {
-				fmt.Printf("[Notification] Failed to process message %s after %d retries.\n", d.MessageId, maxRetries)
-				rdb.Del(ctx, idempotencyKey)
-				d.Nack(false, true)
-			}
+				if err != nil || !isNew {
+					fmt.Printf("[Notification] Message %s already processed. Skipping.\n", d.MessageId)
+					d.Ack(false)
+					return
+				}
+
+				success := false
+				backoff := 2 * time.Second
+				maxRetries := 5
+
+				for i := 1; i <= maxRetries; i++ {
+					err := sender.Send(event.CustomerEmail, event.OrderID, event.Amount)
+					if err == nil {
+						success = true
+						break
+					}
+
+					fmt.Printf("[Notification] Attempt %d failed: %v. Retrying in %v...\n", i, err, backoff)
+					time.Sleep(backoff)
+					backoff *= 2
+				}
+
+				if success {
+					d.Ack(false)
+				} else {
+					fmt.Printf("[Notification] Failed to process message %s after %d retries.\n", d.MessageId, maxRetries)
+					rdb.Del(ctx, idempotencyKey)
+					d.Nack(false, true)
+				}
+			}(d)
 		}
 	}()
 
