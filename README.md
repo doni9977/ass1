@@ -125,23 +125,31 @@ cd test-stream && go run main.go
 ## Architecture Diagram
 ```mermaid
 graph TD
-    %% Определяем стили для красоты (опционально)
+    %% Определяем стили
     classDef database fill:#f9f,stroke:#333,stroke-width:2px;
     classDef cache fill:#ffb3ba,stroke:#333,stroke-width:2px;
     classDef broker fill:#ffdfba,stroke:#333,stroke-width:2px;
     classDef external fill:#baffc9,stroke:#333,stroke-width:2px;
 
-    Client([Client / Postman]) -->|REST Request| OrderService[Order Service]
+    %% Объявляем все ноды (элементы)
+    Client([Client / Postman])
+    OrderService[Order Service]
+    PaymentService[Payment Service]
+    NotificationService[Notification Service]
+    Redis[(Redis)]:::cache
+    OrderDB[(Order DB)]:::database
+    RabbitMQ((RabbitMQ)):::broker
+    EmailProvider[External Email Provider]:::external
+
+    %% Прописываем связи (без двунаправленных стрелок с текстом)
+    Client -->|REST Request| OrderService
     
-    %% Блок Order Service
-    OrderService <-->|Cache-Aside / Rate Limit| Redis[(Redis)]:::cache
-    OrderService <-->|Read / Write| OrderDB[(Order DB)]:::database
-    OrderService -->|gRPC| PaymentService[Payment Service]
+    OrderService -->|Cache-Aside / Rate Limit| Redis
+    OrderService -->|Read / Write| OrderDB
+    OrderService -->|gRPC| PaymentService
     
-    %% Блок Payment & Message Broker
-    PaymentService -->|Publish 'payment.completed'| RabbitMQ((RabbitMQ)):::broker
+    PaymentService -->|Publish payment.completed| RabbitMQ
     
-    %% Блок Notification Service
-    RabbitMQ -->|Consume (Async Worker)| NotificationService[Notification Service]
-    NotificationService <-->|Check Idempotency| Redis
-    NotificationService -->|Adapter (Real/Mock)| EmailProvider[External Email Provider]:::external
+    RabbitMQ -->|Consume Async Worker| NotificationService
+    NotificationService -->|Check Idempotency| Redis
+    NotificationService -->|Adapter Real or Mock| EmailProvider
