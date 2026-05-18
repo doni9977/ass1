@@ -125,13 +125,6 @@ cd test-stream && go run main.go
 ## Architecture Diagram
 ```mermaid
 graph TD
-    Client -->|REST/gRPC| OrderService
-    OrderService -->|gRPC| PaymentService
-    PaymentService -->|Publish payment.completed| RabbitMQ
-    RabbitMQ -->|Consume| NotificationService
-
-
-graph TD
     %% Определяем стили для красоты (опционально)
     classDef database fill:#f9f,stroke:#333,stroke-width:2px;
     classDef cache fill:#ffb3ba,stroke:#333,stroke-width:2px;
